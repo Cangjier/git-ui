@@ -1,9 +1,9 @@
 {
     "tabs": [
         {
-            "key": "chapters",
-            "title": "Chapters",
-            "url": "/web-app-demo/chapters"
+            "key": "git",
+            "title": "Git",
+            "url": "/git-ui/chapters"
         }
     ]
 }
