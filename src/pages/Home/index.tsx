@@ -1,6 +1,6 @@
 import React, { ReactNode, forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { Flex, InjectClass, useUpdate } from "../../natived";
-import { Avatar, Button, Card, ConfigProvider, Dropdown, Spin } from "antd";
+import { Avatar, Button, Card, ConfigProvider, Dropdown, Spin, Splitter } from "antd";
 import { CloseOutlined, MinusOutlined, SettingOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { localServices } from "../../services/localServices.ts";
@@ -131,7 +131,7 @@ export const Home = forwardRef<IHomeRef, IHomeProps>((props, ref) => {
                 cursor: 'pointer',
                 userSelect: 'none'
             }}>
-                {"Web App"}
+                {"Git"}
             </div>
 
             <div className={dragClass} onMouseDown={e => {
@@ -174,41 +174,45 @@ export const Home = forwardRef<IHomeRef, IHomeProps>((props, ref) => {
             flex: 1,
             height: 0
         }}>
-            {/* 侧边 */}
-            <div style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: '8px',
-                width: sidebarVisible ? '120px' : '30px',
-                backgroundColor: '#fff',
-                margin: '0px 6px 0px 0px',
-                padding: '0px 4px',
-            }}>
-                <div style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    flex: 1,
-                    alignItems: 'start',
-                }}>
-                    {layoutTabs.map(tab => renderTab(tab))}
-                </div>
-                <div>
-                    <Button type='text' icon={<SidebarSvg></SidebarSvg>} onClick={() => {
-                        updateSidebarVisible(!sidebarVisible);
-                    }}></Button>
-                </div>
-            </div>
-            <div style={{
-                display: "flex",
-                flexDirection: "column",
-                flex: 1,
-                width: 0,
-                backgroundColor: '#fff',
-                padding: '4px'
-            }}>
-                {layoutTabs.map(item => renderContentByUrl(item))}
-            </div>
-
+            <Splitter style={{ height: 200, boxShadow: '0 0 10px rgba(0, 0, 0, 0.1)' }}>
+                <Splitter.Panel defaultSize="220px" min="20px" max="50%">
+                    <div style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: '8px',
+                        width: "",
+                        backgroundColor: '#fff',
+                        margin: '0px 6px 0px 0px',
+                        padding: '0px 4px',
+                    }}>
+                        <div style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            flex: 1,
+                            alignItems: 'start',
+                        }}>
+                            {layoutTabs.map(tab => renderTab(tab))}
+                        </div>
+                        <div>
+                            <Button type='text' icon={<SidebarSvg></SidebarSvg>} onClick={() => {
+                                updateSidebarVisible(!sidebarVisible);
+                            }}></Button>
+                        </div>
+                    </div>
+                </Splitter.Panel>
+                <Splitter.Panel>
+                    <div style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        flex: 1,
+                        width: 0,
+                        backgroundColor: '#fff',
+                        padding: '4px'
+                    }}>
+                        {layoutTabs.map(item => renderContentByUrl(item))}
+                    </div>
+            </Splitter.Panel>
+            </Splitter>
         </div>
     </div>
 });
