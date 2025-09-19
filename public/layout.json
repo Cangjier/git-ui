@@ -7,9 +7,9 @@
             "icon": "git"
         },
         {
-            "key": "translate",
-            "title": "Translate",
-            "url": "/git-ui/translate",
+            "key": "swig",
+            "title": "Swig",
+            "url": "/git-ui/swig",
             "icon": "translate"
         }
     ]
