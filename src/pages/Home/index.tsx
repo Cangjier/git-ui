@@ -12,6 +12,8 @@ import DocumentsSvg from "../../svgs/Documents.svg?react";
 import WorkspacesSvg from "../../svgs/Workspaces.svg?react";
 import { clientServices } from "../../services/clientServices.ts";
 import { remoteServices } from "../../services/remoteServices.ts";
+import GitSvg from "../../svgs/Git.svg?react";
+import TranslateSvg from "../../svgs/Translate.svg?react";
 
 export const dragClass = InjectClass(`
 -webkit-app-region: drag;
@@ -35,7 +37,6 @@ export interface ILayoutTab {
 
 
 export const Home = forwardRef<IHomeRef, IHomeProps>((props, ref) => {
-    const [sidebarVisible, updateSidebarVisible, sidebarVisibleRef] = useUpdate(false);
     const [loading, updateLoading, loadingRef] = useUpdate(0);
     const [loadingPercent, updateLoadingPercent, loadingPercentRef] = useUpdate<number | undefined>(undefined);
     const [loadingTip, updateLoadingTip, loadingTipRef] = useUpdate('');
@@ -79,16 +80,19 @@ export const Home = forwardRef<IHomeRef, IHomeProps>((props, ref) => {
         localStorage.setItem('currentTab', currentTab);
     }, [currentTab]);
     const renderIcon = (icon?: string) => {
-        if (icon == "documents") return <DocumentsSvg></DocumentsSvg>;
-        else if (icon == "workspaces") return <WorkspacesSvg></WorkspacesSvg>
+        if (icon == "git") return <GitSvg></GitSvg>;
+        else if (icon == "translate") return <TranslateSvg></TranslateSvg>;
         else return <></>;
     };
     const renderTab = (tab: ILayoutTab) => {
         return <Button style={{
+            width: '100%',
+            textAlign: 'left',
+            justifyContent: 'start',
             backgroundColor: tab.key == currentTab ? '#e6f7ff' : undefined
         }} type='text' icon={renderIcon(tab.icon)} onClick={() => {
             updateCurrentTab(tab.key);
-        }}>{sidebarVisible ? tab.title : undefined}</Button>
+        }}>{tab.title}</Button>
     };
     const renderContentByUrl = (tab: ILayoutTab) => {
         if (tab.url.startsWith('/')) {
@@ -167,16 +171,17 @@ export const Home = forwardRef<IHomeRef, IHomeProps>((props, ref) => {
             </div>
 
         </div>
-        <Splitter style={{ flex: 1, height: 0, boxShadow: '0 0 10px rgba(0, 0, 0, 0.1)' }}>
+        <Splitter style={{
+            flex: 1,
+            height: 0,
+            // boxShadow: '0 0 10px rgba(0, 0, 0, 0.1)'
+        }}>
             <Splitter.Panel defaultSize="220px" min="20px" max="50%">
                 <div style={{
                     display: "flex",
                     flexDirection: "column",
                     gap: '8px',
-                    width: "",
-                    backgroundColor: '#fff',
-                    margin: '0px 6px 0px 0px',
-                    padding: '0px 4px',
+                    backgroundColor: '#fff'
                 }}>
                     <div style={{
                         display: "flex",
@@ -186,21 +191,14 @@ export const Home = forwardRef<IHomeRef, IHomeProps>((props, ref) => {
                     }}>
                         {layoutTabs.map(tab => renderTab(tab))}
                     </div>
-                    <div>
-                        <Button type='text' icon={<SidebarSvg></SidebarSvg>} onClick={() => {
-                            updateSidebarVisible(!sidebarVisible);
-                        }}></Button>
-                    </div>
                 </div>
             </Splitter.Panel>
             <Splitter.Panel>
                 <div style={{
                     display: "flex",
                     flexDirection: "column",
-                    flex: 1,
-                    width: 0,
-                    backgroundColor: '#fff',
-                    padding: '4px'
+                    height: "100%",
+                    backgroundColor: '#fff'
                 }}>
                     {layoutTabs.map(item => renderContentByUrl(item))}
                 </div>

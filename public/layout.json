@@ -3,7 +3,14 @@
         {
             "key": "git",
             "title": "Git",
-            "url": "/git-ui/chapters"
+            "url": "/git-ui/git",
+            "icon": "git"
+        },
+        {
+            "key": "translate",
+            "title": "Translate",
+            "url": "/git-ui/translate",
+            "icon": "translate"
         }
     ]
 }
