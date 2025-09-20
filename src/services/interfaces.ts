@@ -33,5 +33,21 @@ export interface ILocation {
     height: number | string,
 }
 
+export interface IGitChange {
+    filePath: string,
+    changeType: "add" | "delete" | "modify" | "rename"
+}
 
+export interface ICommonFolder {
+    name: string,
+    type: "disk" | "user",
+    path: string,
+    icon?: string
+}
 
+export interface IFolderItem {
+    name: string;
+    type: "file" | "directory";
+    path: string;
+    modifyTime: string;
+}

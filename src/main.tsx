@@ -5,6 +5,7 @@ import { Home } from './pages/Home';
 import { InjectStyle } from './natived';
 import { Git } from './pages/Git';
 import { Swig } from './pages/Swig';
+import { FileDialog } from './pages/FileDialog';
 const VITE_PUBLIC_URL = import.meta.env.VITE_PUBLIC_URL;
 console.log(`build time:${import.meta.env.VITE_APP_BUILD_TIME}`);
 InjectStyle(`
@@ -25,6 +26,7 @@ root.render(
         <Route path="/" element={<Home style={{ width: '100vw', height: '100vh' }}></Home>} />
         <Route path="/git" element={<Git />} />
         <Route path="/swig" element={<Swig />} />
+        <Route path="/file-dialog" element={<FileDialog />} />
         {/* <Route path="/settings" element={<Settings />} />
         <Route path="/login" element={<Login />} />
         <Route path="/chapters" element={<Chapters />} /> */}

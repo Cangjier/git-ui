@@ -1,7 +1,7 @@
 import React, { ReactNode, forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { Flex, InjectClass, useUpdate } from "../../natived";
 import { Avatar, Button, Card, ConfigProvider, Dropdown, Spin, Splitter } from "antd";
-import { CloseOutlined, MinusOutlined, SettingOutlined } from "@ant-design/icons";
+import { CloseOutlined, FolderOutlined, MinusOutlined, SettingOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { localServices } from "../../services/localServices.ts";
 import SidebarSvg from "../../svgs/Sidebar.svg?react";
@@ -82,6 +82,7 @@ export const Home = forwardRef<IHomeRef, IHomeProps>((props, ref) => {
     const renderIcon = (icon?: string) => {
         if (icon == "git") return <GitSvg></GitSvg>;
         else if (icon == "translate") return <TranslateSvg></TranslateSvg>;
+        else if (icon == "folder") return <FolderOutlined />;
         else return <></>;
     };
     const renderTab = (tab: ILayoutTab) => {

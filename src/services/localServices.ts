@@ -1,5 +1,5 @@
 import axios from "axios";
-import { ILoginInfo, IProgress, IUserInfomation } from "./interfaces";
+import { ICommonFolder, IFolderItem, ILoginInfo, IProgress, IUserInfomation } from "./interfaces";
 import { BaseServices } from "./baseServices";
 const debug = import.meta.env.VITE_DEBUG === "true";
 if (debug) {
@@ -45,12 +45,60 @@ const LocalServices = () => {
         return response;
     }
 
+    const fileConstructor = () => {
+        const list = async (path: string) => {
+            let response = await runAsync("file", {
+                action: "list",
+                path
+            }, (progress: IProgress) => {
+            });
+            return (response as {
+                items: IFolderItem[]
+            }).items;
+        };
+        const read = async (path: string) => {
+            let response = await runAsync("file", {
+                action: "read",
+                path
+            }, (progress: IProgress) => {
+            });
+            return response as {
+                content: string
+            }
+        };
+        const write = async (path: string, content: string) => {
+            await runAsync("file", {
+                action: "write",
+                path,
+                content
+            }, (progress: IProgress) => {
+            });
+        };
+        const commonFolders = async () => {
+            let response = await runAsync("file", {
+                action: "common-folders"
+            }, (progress: IProgress) => {
+            });
+            return response as {
+                items: ICommonFolder[]
+            }
+        };
+        return {
+            list,
+            read,
+            write,
+            commonFolders
+        };
+    };
+    const file = fileConstructor();
+
     return {
         getUserInfo,
         logout,
         login,
         getLoginInfo,
         getSettings,
+        file,
         ...base
     }
 }

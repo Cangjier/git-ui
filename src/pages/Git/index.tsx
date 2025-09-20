@@ -3,6 +3,7 @@ import { forwardRef, useState } from "react";
 import { RedoOutlined } from "@ant-design/icons";
 
 export const Git = forwardRef<HTMLDivElement, {}>((props, ref) => {
+    const [projectPath, updateProjectPath] = useState("");
     const [projectName, updateProjectName] = useState("");
     const [branchName, updateBranchName] = useState("");
     const [message, updateMessage] = useState("");

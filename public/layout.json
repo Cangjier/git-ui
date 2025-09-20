@@ -1,6 +1,12 @@
 {
     "tabs": [
         {
+            "key": "file-dialog",
+            "title": "File",
+            "url": "/git-ui/file-dialog",
+            "icon": "folder"
+        },
+        {
             "key": "git",
             "title": "Git",
             "url": "/git-ui/git",
