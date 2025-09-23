@@ -2,8 +2,9 @@ import axios from "axios";
 import { IProgress } from "./interfaces";
 
 export const BaseServices = (baseURL: string | undefined) => {
+    baseURL = baseURL ?? window.location.href;
     const api = axios.create({
-        baseURL: baseURL ?? window.location.href
+        baseURL: baseURL
     });
 
     const _runAsync = async (pluginName: string, input: any) => {
@@ -80,6 +81,7 @@ export const BaseServices = (baseURL: string | undefined) => {
     return {
         api,
         runAsync,
-        run
+        run,
+        getBaseURL: () => baseURL
     }
 }

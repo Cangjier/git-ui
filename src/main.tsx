@@ -26,7 +26,7 @@ root.render(
         <Route path="/" element={<Home style={{ width: '100vw', height: '100vh' }}></Home>} />
         <Route path="/git" element={<Git />} />
         <Route path="/swig" element={<Swig />} />
-        <Route path="/file-dialog" element={<FileDialog />} />
+        <Route path="/file-dialog" element={<FileDialog style={{ width: '100vw', height: '100vh' }} />} />
         {/* <Route path="/settings" element={<Settings />} />
         <Route path="/login" element={<Login />} />
         <Route path="/chapters" element={<Chapters />} /> */}
