@@ -17,7 +17,7 @@ export const GitBranchSelectorApp = forwardRef<HTMLDivElement, {
 }>((props, ref) => {
     const calculateTableData = (raw: IGitBranch[]) => {
         return raw.map(item => ({
-            key: item.name,
+            key: `${item.type}-${item.name}`,
             ...item
         }));
     }

@@ -40,7 +40,7 @@ export const GitCommitSelectorApp = forwardRef<{}, {
     const [commits, updateCommits] = useState<GitCommitRecord[]>([]);
     const [selectedCommit, updateSelectedCommit] = useState<IGitLog | undefined>(props.defaultSelectedCommit);
     const [lastSelectedHashCommit, updateLastSelectedHashCommit, lastSelectedHashCommitRef] = useUpdate<IGitLog | undefined>(isHashCommit(props.defaultSelectedCommit?.hash) ? props.defaultSelectedCommit : undefined);
-    const [loading, updateLoading] = useState({
+    const [loading, updateLoading, loadingRef] = useUpdate({
         loading: 0,
         perence: undefined as string | undefined,
         message: undefined as string | undefined
@@ -54,10 +54,19 @@ export const GitCommitSelectorApp = forwardRef<{}, {
         try {
             await callback();
         } catch (error) {
-            if (error instanceof Error) {
-                props.messageApi.error(error.message);
-            } else {
-                props.messageApi.error("Unknown error");
+            let isInnerError = false;
+            if (options.useLoading && loadingRef.current.loading > 1) {
+                isInnerError = true;
+            }
+            if (isInnerError) {
+                throw error;
+            }
+            else {
+                if (error instanceof Error) {
+                    props.messageApi.error(error.message);
+                } else {
+                    props.messageApi.error("Unknown error");
+                }
             }
         } finally {
             if (options.useLoading) {
@@ -65,33 +74,7 @@ export const GitCommitSelectorApp = forwardRef<{}, {
             }
         }
     };
-    const onSelectBranch = async () => {
-        let selectedBranch: IGitBranch | undefined = currentBranch;
-        let accept = await showModal((self) => {
-            return <GitBranchSelectorApp style={{
-                flex: 1,
-                height: 0
-            }} projectPath={props.projectPath} onSelect={(branch) => {
-                selectedBranch = branch;
-            }} selectedBranchName={selectedBranch?.name} />
-        }, {
-            bodyStyles: {
-                height: "60vh",
-                display: "flex",
-                flexDirection: "column"
-            },
-            contentStyles: {
-                padding: "50px 10px 10px 10px"
-            }
-        });
-        if (accept == false) {
-            return;
-        }
-        if (selectedBranch == undefined) {
-            return;
-        }
-        updateCurrentBranch(selectedBranch);
-    };
+
     const refreshCommitsRef = useRef(async () => {
         await Try({ useLoading: true }, async () => {
             if (currentBranchRef.current == undefined) {
@@ -123,7 +106,34 @@ export const GitCommitSelectorApp = forwardRef<{}, {
             })));
         });
     });
-
+    const onSelectBranch = async () => {
+        let selectedBranch: IGitBranch | undefined = currentBranch;
+        let accept = await showModal((self) => {
+            return <GitBranchSelectorApp style={{
+                flex: 1,
+                height: 0
+            }} projectPath={props.projectPath} onSelect={(branch) => {
+                selectedBranch = branch;
+            }} selectedBranchName={selectedBranch?.name} />
+        }, {
+            bodyStyles: {
+                height: "60vh",
+                display: "flex",
+                flexDirection: "column"
+            },
+            contentStyles: {
+                padding: "50px 10px 10px 10px"
+            }
+        });
+        if (accept == false) {
+            return;
+        }
+        if (selectedBranch == undefined) {
+            return;
+        }
+        updateCurrentBranch(selectedBranch);
+        await refreshCommitsRef.current();
+    };
     useEffect(() => {
         if (currentBranch != undefined) {
             refreshCommitsRef.current();

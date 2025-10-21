@@ -15,6 +15,8 @@ import { EventDataNode } from "antd/es/tree";
 import DotSVG from "../../svgs/Dot.svg?react";
 import { GitCommitSelectorApp } from "../../apps/GitCommitSelectorApp";
 import GitCommitSVG from "../../svgs/GitCommit.svg?react";
+import { TableApp } from "../../apps/TableApp";
+import { ColumnsType } from "antd/es/table";
 
 loader.config({ monaco })
 
@@ -95,7 +97,7 @@ export const Git = forwardRef<HTMLDivElement, {}>((props, ref) => {
     const { showModal, modalContainer } = useModal();
     const [projectPath, updateProjectPath, projectPathRef] = useUpdate("");
     const [currentBranch, updateCurrentBranch, currentBranchRef] = useUpdate<IGitBranch | undefined>(undefined);
-    const [commitMessage, updateCommitMessage] = useState("");
+    const [commitMessage, updateCommitMessage, commitMessageRef] = useUpdate("");
     const [originalCode, updateOriginalCode] = useState("");
     const [modifiedCode, updateModifiedCode, modifiedCodeRef] = useUpdate("");
     const [changes, updateChanges, changesRef] = useUpdate<GitChangeRecord[] | undefined>(undefined);
@@ -104,12 +106,12 @@ export const Git = forwardRef<HTMLDivElement, {}>((props, ref) => {
     const [modifiedChanged, updateModifiedChanged] = useState(false);
     const modifiedRawRef = useRef("");
     const modifiedWordWrapRef = useRef<"on" | "off" | "wordWrapColumn" | "bounded" | undefined>("on");
-    const [leftPanelLoading, updateLeftPanelLoading] = useState({
+    const [leftPanelLoading, updateLeftPanelLoading, leftPanelLoadingRef] = useUpdate({
         loading: 0,
         progress: 0,
         message: ""
     });
-    const [rightPanelLoading, updateRightPanelLoading] = useState({
+    const [rightPanelLoading, updateRightPanelLoading, rightPanelLoadingRef] = useUpdate({
         loading: 0,
         progress: 0,
         message: ""
@@ -137,10 +139,22 @@ export const Git = forwardRef<HTMLDivElement, {}>((props, ref) => {
             await callback();
         }
         catch (error) {
-            if (error instanceof Error) {
-                messageApi.error(error.message);
-            } else {
-                messageApi.error(error?.toString() ?? "Unknown error");
+            let isInnerError = false;
+            if (options.useLeftPanelLoading && leftPanelLoadingRef.current.loading > 1) {
+                isInnerError = true;
+            }
+            if (options.useRightPanelLoading && rightPanelLoadingRef.current.loading > 1) {
+                isInnerError = true;
+            }
+            if (isInnerError) {
+                throw error;
+            }
+            else {
+                if (error instanceof Error) {
+                    messageApi.error(error.message);
+                } else {
+                    messageApi.error(error?.toString() ?? "Unknown error");
+                }
             }
         }
         finally {
@@ -172,12 +186,20 @@ export const Git = forwardRef<HTMLDivElement, {}>((props, ref) => {
     const switchBranchJustSwitchRef = useRef(async (branch: IGitBranch) => {
         await Try({ useLeftPanelLoading: true }, async () => {
             if (branch.type == "local") {
+                if (currentBranchRef.current?.name == branch.name) {
+                    throw new Error("Already on this branch");
+                }
                 await localServices.git.switchBranch(projectPathRef.current, branch.name, {
 
                 });
             }
             else {
-                await localServices.git.switchBranch(projectPathRef.current, branch.name, {
+                let slashIndex = branch.name.indexOf("/");
+                let branchName = slashIndex == -1 ? branch.name : branch.name.slice(slashIndex + 1);
+                if (currentBranchRef.current?.name == branchName) {
+                    throw new Error("Already on this branch");
+                }
+                await localServices.git.switchBranch(projectPathRef.current, branchName, {
                     createLocalBranch: true
                 });
             }
@@ -281,7 +303,8 @@ export const Git = forwardRef<HTMLDivElement, {}>((props, ref) => {
                 return;
             }
             await switchBranchJustSwitchRef.current(selectedBranch);
-            updateBranchRef.current(selectedBranch);
+            await initializeCurrentBranchRef.current(projectPathRef.current);
+            await initializeChangesRef.current(projectPathRef.current);
         });
     };
     const getCommitCode = async (commit: string, change: GitChangeRecord) => {
@@ -487,6 +510,85 @@ export const Git = forwardRef<HTMLDivElement, {}>((props, ref) => {
         updateModifiedCode("");
         modifiedRawRef.current = "";
     };
+    const onCommit = async () => {
+        if (commitMessageRef.current == "") {
+            messageApi.error("Please enter commit message");
+            return;
+        }
+        let changes = await localServices.git.diff(projectPathRef.current, "HEAD", "Workspace");
+        if (changes.length == 0) {
+            messageApi.error("No changes to commit");
+            return;
+        }
+        let accept = await showModal((self) => {
+            const data: GitChangeRecord[] = convertToGitChangeRecord(changes);
+            return <div style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "10px",
+            }}>
+                <div style={{ fontWeight: "bold", fontSize: "16px" }}>Are you sure to commit?</div>
+                <DirectoryTree
+                    titleRender={(node) => {
+                        if (node.isLeaf == false) return node.title;
+                        if (node.status == "deleted") {
+                            return <span style={{
+                                alignItems: "center",
+                                textDecoration: "line-through"
+                            }}>
+                                {node.title}
+                                <span style={{
+                                    marginLeft: "5px"
+                                }} />
+                                <Tooltip title="Deleted"><DeleteOutlined /></Tooltip>
+                            </span>
+                        }
+                        else if (node.status == "untracked") {
+                            return <span style={{
+                                alignItems: "center",
+                            }}>
+                                {node.title}
+                                <span style={{
+                                    marginLeft: "5px"
+                                }} />
+                                <Tooltip title="Untracked"><FileAddOutlined /></Tooltip>
+                            </span>
+                        }
+                        else if (node.status == "modified") {
+                            return <span style={{
+                                alignItems: "center",
+                            }}>
+                                {node.title}
+                                <span style={{
+                                    marginLeft: "5px"
+                                }} />
+                                <Tooltip title="Modified"><DiffOutlined /></Tooltip>
+                            </span>
+                        }
+                    }}
+                    style={{
+                        flex: 1
+                    }}
+                    defaultExpandAll
+                    treeData={data} />
+            </div>
+        }, {
+            width: "80vw",
+            bodyStyles: {
+                height: "65vh"
+            }
+        });
+        if (accept == false) {
+            return;
+        }
+        await Try({ useLeftPanelLoading: true, useRightPanelLoading: true }, async () => {
+            await localServices.git.add(projectPathRef.current);
+            await localServices.git.commit(projectPathRef.current, commitMessageRef.current);
+            if (diffOldCommitRef.current.hash.toLowerCase() == "head" && diffNewCommitRef.current.hash.toLowerCase() == "workspace") {
+                await initializeChangesRef.current(projectPathRef.current);
+            }
+        });
+    };
     return <div style={{
         display: "flex",
         flexDirection: "column",
@@ -531,11 +633,16 @@ export const Git = forwardRef<HTMLDivElement, {}>((props, ref) => {
                     </div>
                     {/* Commit Message */}
                     <Input.TextArea
+                        style={{
+                            display: projectPath == "" || currentBranch == undefined ? 'none' : 'inline-block',
+                        }}
                         autoFocus={true}
                         autoSize={{ minRows: 1, maxRows: 9 }}
                         placeholder="Commit message"
                         defaultValue={commitMessage}
                         onBlur={(e) => updateCommitMessage(e.target.value)} />
+                    {projectPath != "" && currentBranch != undefined &&
+                        <Button type="primary" onClick={onCommit}>Commit</Button>}
                     {/* Changes */}
                     <div style={{
                         display: currentBranch == undefined ? 'none' : 'flex',
@@ -647,7 +754,9 @@ export const Git = forwardRef<HTMLDivElement, {}>((props, ref) => {
                         fontSize: "14px",
                         color: "#aaa"
                     }}>
-                        {"To see the diff, please select two commits to compare"}
+                        {projectPath == "" ? "Please select a project"
+                            : currentBranch == undefined ? "Please select a branch"
+                                : "To see the diff, please select a file"}
                     </div>
                     <div style={{
                         display: rightPanelView == "diff" ? 'flex' : 'none',
