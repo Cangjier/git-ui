@@ -33,11 +33,6 @@ export interface ILocation {
     height: number | string,
 }
 
-export interface IGitChange {
-    filePath: string,
-    changeType: "add" | "delete" | "modify" | "rename"
-}
-
 export interface ICommonFolder {
     name: string,
     type: "disk" | "user",
@@ -50,4 +45,39 @@ export interface IFolderItem {
     type: "file" | "directory";
     path: string;
     modifyTime: string;
+}
+
+
+export interface IGitChange {
+    path: string;
+    status: "deleted" | "modified" | "untracked";
+}
+
+export interface IGitLog {
+    hash: string;
+    author: string;
+    date: string;
+    message: string[];
+}
+
+export interface IGitCommit {
+    hash: string; // 提交哈希
+    author: string; // 作者
+    date: string; // 提交日期
+    message: string[]; // 提交信息（多行）
+    parents?: string[]; // 父提交哈希（可选，合并提交时有多个）
+    refs?: string[]; // 关联的引用（如分支、tag，通常可选）
+}
+
+export interface IGitBranch {
+    type: "local" | "remote"; // 分支类型
+    name: string;             // 分支名称
+    lastCommit: IGitCommit;
+    ref?: {                   // 可选，分支引用信息
+        name: string;         // 引用名称
+        remoteName?: string;  // 远程名称（可选）
+        fetchUrl?: string;        // 远程 fetch 地址
+        pushUrl?: string;         // 远程 push 地址
+        lastCommit: IGitCommit;
+    };
 }

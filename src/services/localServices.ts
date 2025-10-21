@@ -1,5 +1,5 @@
 import axios from "axios";
-import { ICommonFolder, IFolderItem, ILoginInfo, IProgress, IUserInfomation } from "./interfaces";
+import { ICommonFolder, IFolderItem, IGitBranch, IGitChange, IGitCommit, IGitLog, ILoginInfo, IProgress, IUserInfomation } from "./interfaces";
 import { BaseServices } from "./baseServices";
 const debug = import.meta.env.VITE_DEBUG === "true";
 if (debug) {
@@ -60,9 +60,9 @@ const LocalServices = () => {
                 action: "read",
                 path
             });
-            return response as {
+            return (response as {
                 content: string
-            }
+            }).content;
         };
         const write = async (path: string, content: string) => {
             await run("file", {
@@ -176,6 +176,347 @@ const LocalServices = () => {
     };
     const file = fileConstructor();
 
+    const gitConstructor = () => {
+        const runGit = async (params: any) => {
+            return await run("git", params);
+        };
+
+        const runGitAsync = async (params: any, onProgress: (progress: IProgress) => void) => {
+            return await runAsync("git", params, onProgress);
+        };
+
+        const add = async (path: string) => {
+            return await runGit({
+                action: "add",
+                path
+            });
+        };
+
+        const commit = async (path: string, message: string) => {
+            return await runGit({
+                action: "commit",
+                path,
+                message
+            });
+        };
+
+        const addCommit = async (path: string, message: string) => {
+            return await runGit({
+                action: "add-commit",
+                path,
+                message
+            });
+        };
+
+        const pull = async (path: string) => {
+            return await runGit({
+                action: "pull",
+                path
+            });
+        };
+
+        const push = async (path: string) => {
+            return await runGit({
+                action: "push",
+                path
+            });
+        };
+
+        const fetch = async (path: string) => {
+            return await runGit({
+                action: "fetch",
+                path
+            });
+        };
+
+        const status = async (path: string) => {
+            return (await runGit({
+                action: "status",
+                path
+            }) as {
+                changes: IGitChange[]
+            }).changes;
+        };
+
+        const statusAsync = async (path: string, onProgress: (progress: IProgress) => void) => {
+            return (await runGitAsync({
+                action: "status",
+                path
+            }, onProgress) as {
+                changes: IGitChange[]
+            }).changes;
+        };
+
+        const log = async (path: string) => {
+            return (await runGit({
+                action: "log",
+                path
+            }) as {
+                logs: IGitLog[]
+            }).logs;
+        };
+
+        const checkout = async (path: string, branch: string) => {
+            return await runGit({
+                action: "checkout",
+                path,
+                branch
+            });
+        };
+
+        const createBranch = async (path: string, branch: string) => {
+            return await runGit({
+                action: "create-branch",
+                path,
+                branch
+            });
+        };
+
+        const deleteBranch = async (path: string, branch: string) => {
+            return await runGit({
+                action: "delete-branch",
+                path,
+                branch
+            });
+        };
+
+        const switchBranch = async (path: string, branch: string, switchOptions: {
+            createLocalBranch?: boolean
+        }) => {
+            return await runGit({
+                action: "switch-branch",
+                path,
+                branch,
+                switchOptions
+            });
+        };
+
+        const currentBranch = async (path: string) => {
+            return (await runGit({
+                action: "current-branch",
+                path
+            }) as {
+                branch: IGitBranch
+            }).branch;
+        };
+
+        const currentBranchAsync = async (path: string, onProgress: (progress: IProgress) => void) => {
+            return (await runGitAsync({
+                action: "current-branch",
+                path
+            }, onProgress) as {
+                branch: IGitBranch
+            }).branch;
+        };
+
+        const listBranch = async (path: string) => {
+            return await runGit({
+                action: "list-branch",
+                path
+            }) as {
+                currentBranch: string,
+                localBranches: IGitBranch[],
+                remoteBranches: IGitBranch[]
+            };
+        };
+
+        const getBranch = async (path: string, branch: string) => {
+            return (await runGit({
+                action: "get-branch",
+                path,
+                branch
+            }) as {
+                branch: IGitBranch
+            }).branch;
+        };
+
+        const getGlobalConfig = async (path: string) => {
+            return await runGit({
+                action: "get-global-config",
+                path
+            });
+        };
+
+        const setGlobalConfig = async (path: string, config: { [key: string]: string }) => {
+            return await runGit({
+                action: "set-global-config",
+                path,
+                config
+            });
+        };
+
+        const getSparseCheckout = async (path: string) => {
+            return await runGit({
+                action: "get-sparse-checkout",
+                path
+            });
+        };
+
+        const setSparseCheckout = async (path: string, sparse: string[]) => {
+            return await runGit({
+                action: "set-sparse-checkout",
+                path,
+                sparse
+            });
+        };
+
+        const getIgnore = async (path: string) => {
+            return await runGit({
+                action: "get-ignore",
+                path
+            });
+        };
+
+        const setIgnore = async (path: string, ignore: string[]) => {
+            return await runGit({
+                action: "set-ignore",
+                path,
+                ignore
+            });
+        };
+
+        const cleanFd = async (path: string) => {
+            return await runGit({
+                action: "clean-fd",
+                path
+            });
+        };
+
+        const resetHard = async (path: string) => {
+            return await runGit({
+                action: "reset-hard",
+                path
+            });
+        };
+
+        const getRemotes = async (path: string) => {
+            return await runGit({
+                action: "get-remotes",
+                path
+            });
+        };
+
+        const show = async (path: string, targetFile: string, commitHash: string) => {
+            return (await runGit({
+                action: "show",
+                path,
+                targetFile,
+                commitHash
+            }) as {
+                content: string
+            }).content;
+        };
+
+        const getCommits = async (path: string, branch: string, options: {
+            count?: number,
+            searchKeywords?: string[],
+            searchAuthor?: string
+        }) => {
+            return (await runGit({
+                action: "get-commits",
+                path,
+                branch,
+                count: options.count,
+                searchKeywords: options.searchKeywords,
+                searchAuthor: options.searchAuthor
+            }) as {
+                commits: IGitLog[]
+            }).commits;
+        };
+        const reverseDiff = (changes: IGitChange[]) => {
+            return changes.map(change => {
+                return {
+                    ...change,
+                    status: change.status == "deleted" ? "untracked" :
+                        change.status == "untracked" ? "deleted" : change.status
+                } as IGitChange;
+            });
+        };
+        const diff = async (path: string, diffLeftCommit: string, diffRightCommit: string) => {
+            let lowercaseDiffLeftCommit = diffLeftCommit.toLowerCase();
+            let lowercaseDiffRightCommit = diffRightCommit.toLowerCase();
+            if (lowercaseDiffLeftCommit == "head" && lowercaseDiffRightCommit == "workspace") {
+                return (await runGit({
+                    action: "status",
+                    path
+                }) as {
+                    changes: IGitChange[]
+                }).changes;
+            }
+            else if (lowercaseDiffLeftCommit == "workspace" && lowercaseDiffRightCommit == "head") {
+                return reverseDiff((await runGit({
+                    action: "status",
+                    path
+                }) as {
+                    changes: IGitChange[]
+                }).changes);
+            }
+            else if (lowercaseDiffLeftCommit == "workspace") {
+                return reverseDiff((await runGit({
+                    action: "diff",
+                    path,
+                    diffLeftCommit: "",
+                    diffRightCommit
+                }) as {
+                    changes: IGitChange[]
+                }).changes);
+            }
+            else {
+                if (lowercaseDiffRightCommit == "workspace") {
+                    diffRightCommit = "";
+                }
+                if (lowercaseDiffLeftCommit == "head") {
+                    diffLeftCommit = "HEAD";
+                }
+                if (lowercaseDiffRightCommit == "head") {
+                    diffRightCommit = "HEAD";
+                }
+                return (await runGit({
+                    action: "diff",
+                    path,
+                    diffLeftCommit,
+                    diffRightCommit
+                }) as {
+                    changes: IGitChange[]
+                }).changes;
+            }
+        };
+
+        return {
+            add,
+            commit,
+            addCommit,
+            pull,
+            push,
+            fetch,
+            status,
+            statusAsync,
+            log,
+            checkout,
+            createBranch,
+            deleteBranch,
+            switchBranch,
+            currentBranch,
+            currentBranchAsync,
+            listBranch,
+            getBranch,
+            getGlobalConfig,
+            setGlobalConfig,
+            getSparseCheckout,
+            setSparseCheckout,
+            getIgnore,
+            setIgnore,
+            cleanFd,
+            resetHard,
+            getRemotes,
+            show,
+            getCommits,
+            diff
+        };
+    };
+
+    const git = gitConstructor();
+
     return {
         getUserInfo,
         logout,
@@ -183,6 +524,7 @@ const LocalServices = () => {
         getLoginInfo,
         getSettings,
         file,
+        git,
         ...base
     }
 }

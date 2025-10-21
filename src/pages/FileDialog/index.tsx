@@ -3,25 +3,52 @@ import { ICommonFolder, IFolderItem } from "../../services/interfaces";
 import { ArrowUpOutlined, DesktopOutlined, FileOutlined, FolderOutlined, UserOutlined } from "@ant-design/icons";
 import DiskSvg from "../../svgs/Disk.svg?react";
 import { localServices } from "../../services/localServices";
-import { Collapse, ConfigProvider, Dropdown, Input, message, Splitter, Table } from "antd";
+import { Collapse, ConfigProvider, Dropdown, Input, message, Spin, Splitter, Table } from "antd";
 import { ColumnsType } from "antd/es/table";
 import { TableApp } from "../../apps/TableApp";
 import { InjectClass, useUpdate } from "../../natived";
 import { clientServices } from "../../services/clientServices";
 // 淡蓝色
-const hilightColor = "#c6e0ff";
-const hilightClass = InjectClass(`
+export const hilightColor = "#c6e0ff";
+export const hilightClass = InjectClass(`
     background-color: ${hilightColor};
 `);
 export const FileDialog = forwardRef<HTMLDivElement, {
-    style?: React.CSSProperties
+    style?: React.CSSProperties,
+    defaultCurrentFolder?: string,
+    onCurrentFolderChange?: (path: string) => void
 }>((props, ref) => {
     const [messageApi, messageContextHolder] = message.useMessage();
-    const [currentFolder, updateCurrentFolder, currentFolderRef] = useUpdate<string>("");
+    const [currentFolder, updateCurrentFolder, currentFolderRef] = useUpdate<string>(props.defaultCurrentFolder ?? "");
     const [currentFolderEditing, updateCurrentFolderEditing] = useState<boolean>(false);
     const [currentFolderItems, updateCurrentFolderItems] = useState<IFolderItem[]>([]);
     const [commonFolders, updateCommonFolders] = useState<ICommonFolder[]>([]);
     const [hilightRows, updateHilightRows] = useState<string[]>([]);
+    const [loading, updateLoading] = useState({
+        loading: 0,
+        percent: undefined,
+        message: ""
+    });
+    const Try = async (options: {
+        useLoading?: boolean
+    }, callback: () => Promise<void>) => {
+        if (options.useLoading) {
+            updateLoading(old => ({ ...old, loading: old.loading + 1 }));
+        }
+        try {
+            await callback();
+        } catch (error) {
+            if (error instanceof Error) {
+                messageApi.error(error.message);
+            } else {
+                messageApi.error("Unknown error");
+            }
+        } finally {
+            if (options.useLoading) {
+                updateLoading(old => ({ ...old, loading: old.loading - 1 }));
+            }
+        }
+    }
     const renderFolderIcon = (item: ICommonFolder) => {
         if (item.type === "disk") {
             return <DiskSvg />
@@ -69,12 +96,21 @@ export const FileDialog = forwardRef<HTMLDivElement, {
             await refreshCurrentFolder.current();
         }
     });
-    const refreshCurrentFolder = useRef(async () => {
-        if (currentFolderRef.current == "") {
-            return;
-        }
-        let result = await localServices.file.list(currentFolderRef.current);
-        updateCurrentFolderItems(result);
+    const refreshCurrentFolder = useRef(async (currentFolderValue: string | undefined = undefined) => {
+        await Try({ useLoading: false }, async () => {
+            if (currentFolderValue == undefined) {
+                if (currentFolderRef.current == "") {
+                    return;
+                }
+                let result = await localServices.file.list(currentFolderRef.current);
+                updateCurrentFolderItems(result);
+            }
+            else {
+                let result = await localServices.file.list(currentFolderValue);
+                updateCurrentFolder(currentFolderValue);
+                updateCurrentFolderItems(result);
+            }
+        });
     });
     const folderItemsColumns: ColumnsType<IFolderItem> = [
         {
@@ -114,8 +150,7 @@ export const FileDialog = forwardRef<HTMLDivElement, {
                         e.preventDefault();
                         e.stopPropagation();
                         if (record.type == "directory") {
-                            updateCurrentFolder(record.path);
-                            await refreshCurrentFolder.current();
+                            await refreshCurrentFolder.current(record.path);
                         }
                     }}>
                         {record.type == "file" ? <FileOutlined /> : <FolderOutlined />}{record.name}
@@ -152,6 +187,9 @@ export const FileDialog = forwardRef<HTMLDivElement, {
         refreshCommonFolders.current();
         refreshCurrentFolder.current();
     }, []);
+    useEffect(() => {
+        props.onCurrentFolderChange?.(currentFolder);
+    }, [currentFolder]);
     const onCurrentFolderChangeByInput = async (path: string) => {
         if (await localServices.file.directoryExists(path)) {
             updateCurrentFolder(path);
@@ -182,6 +220,7 @@ export const FileDialog = forwardRef<HTMLDivElement, {
             </Splitter.Panel>
             <Splitter.Panel>
                 <div style={{
+                    position: "relative",
                     display: "flex",
                     flexDirection: "column",
                     height: "100%"
@@ -265,7 +304,18 @@ export const FileDialog = forwardRef<HTMLDivElement, {
                             }}
                         />
                     </ConfigProvider>
-
+                    <div style={{
+                        position: "absolute",
+                        display: loading.loading > 0 ? "flex" : "none",
+                        flexDirection: "row",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: "rgba(0, 0, 0, 0.5)",
+                    }}><Spin tip={loading.message} percent={loading.percent} /></div>
                 </div>
             </Splitter.Panel>
         </Splitter>
