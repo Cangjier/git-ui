@@ -1,5 +1,5 @@
 import axios from "axios";
-import { ICommonFolder, IFolderItem, IGitBranch, IGitChange, IGitCommit, IGitLog, ILoginInfo, IProgress, IUserInfomation } from "./interfaces";
+import { ICommonFolder, IFolderItem, IGitBranch, IGitChange, IGitCommit, IGitLog, ILoginInfo, INeuecaxWorkspace, IProgress, IUserInfomation } from "./interfaces";
 import { BaseServices } from "./baseServices";
 const debug = import.meta.env.VITE_DEBUG === "true";
 if (debug) {
@@ -157,6 +157,22 @@ const LocalServices = () => {
                 path
             });
         };
+        const readAppdata = async (path: string) => {
+            let response = await run("file", {
+                action: "read-appdata",
+                path
+            });
+            return (response as {
+                content: string
+            }).content;
+        };
+        const writeAppdata = async (path: string, content: string) => {
+            await run("file", {
+                action: "write-appdata",
+                path,
+                content
+            });
+        };
         return {
             list,
             read,
@@ -171,7 +187,9 @@ const LocalServices = () => {
             getFileExtension,
             getFileNameWithoutExtension,
             revealFileInExplorer,
-            openDirectoryInExplorer
+            openDirectoryInExplorer,
+            readAppdata,
+            writeAppdata
         };
     };
     const file = fileConstructor();
@@ -517,6 +535,46 @@ const LocalServices = () => {
 
     const git = gitConstructor();
 
+    const neuecaxConstructor = () => {
+        const listWorkspaces = async () => {
+            let response = await run("neuecax", {
+                action: "list-workspaces"
+            });
+            return (response as {
+                workspaces: INeuecaxWorkspace[]
+            }).workspaces;
+        };
+        const readFile = async (path: string, filename: string) => {
+            let response = await run("neuecax", {
+                action: "read-file",
+                file: {
+                    directory: path,
+                    filename: filename
+                }
+            });
+            return (response as {
+                content: string
+            }).content;
+        };
+        const writeFile = async (path: string, filename: string, content: string) => {
+            await run("neuecax", {
+                action: "write-file",
+                file: {
+                    directory: path,
+                    filename: filename
+                },
+                content: content
+            });
+        };
+        return {
+            listWorkspaces,
+            readFile,
+            writeFile
+        };
+    };
+
+    const neuecax = neuecaxConstructor();
+
     return {
         getUserInfo,
         logout,
@@ -525,6 +583,7 @@ const LocalServices = () => {
         getSettings,
         file,
         git,
+        neuecax,
         ...base
     }
 }

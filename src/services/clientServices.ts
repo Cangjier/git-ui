@@ -9,6 +9,7 @@ export interface IBroadcastMessage {
     data: any;
 }
 export const ClientServices = () => {
+    (window as any).app_id = generateGUID();
     const base = BaseServices((window as any).webapplication.baseURL ?? "http://localhost:12332");
     const api = base.api;
     const broadcastWebSocket = new WebSocket(base.getBaseURL() + "/api/v1/app/broadcast");
@@ -103,6 +104,15 @@ export const ClientServices = () => {
         }
     }
 
+    const exit = async () => {
+        let webapplication = (window as any).webapplication;
+        if (webapplication) {
+            await api.post("/api/v1/app/exit", {
+                id: webapplication.id
+            });
+        }
+    }
+
     const minimize = async () => {
         let webapplication = (window as any).webapplication;
         if (webapplication) {
@@ -149,7 +159,7 @@ export const ClientServices = () => {
     const broadcastRegister = async () => {
         broadcastWebSocket.send(JSON.stringify({
             action: "register",
-            app_id: (window as any).webapplication.id,
+            app_id: (window as any).app_id,
             websocket_session_id: generateGUID(),
             url: "/api/v1/app/broadcast",
             response: "/register-response",
@@ -159,7 +169,7 @@ export const ClientServices = () => {
     const broadcast = async (message: IBroadcastMessage) => {
         broadcastWebSocket.send(JSON.stringify({
             action: "broadcast",
-            app_id: (window as any).webapplication.id,
+            app_id: (window as any).app_id,
             websocket_session_id: generateGUID(),
             url: "/api/v1/app/broadcast",
             response: "/broadcast-response",
@@ -167,26 +177,28 @@ export const ClientServices = () => {
         }));
     }
 
+    const registerBroadcastEvent = (event: (data: IBroadcastMessage) => void) => {
+        broadcastEvents.push(event);
+        return () => {
+            let index = broadcastEvents.indexOf(event);
+            if (index > -1) {
+                broadcastEvents.splice(index, 1);
+            }
+        }
+    }
     return {
         openUrl,
         home,
         openwithdata,
         mouseDownDrag,
         close,
+        exit,
         minimize,
         getDataByID,
         show,
         broadcast,
         copy,
-        registerBroadcastEvent: (event: (data: IBroadcastMessage) => void) => {
-            broadcastEvents.push(event);
-            return () => {
-                let index = broadcastEvents.indexOf(event);
-                if (index > -1) {
-                    broadcastEvents.splice(index, 1);
-                }
-            }
-        },
+        registerBroadcastEvent,
         ...base
     }
 }

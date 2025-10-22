@@ -215,7 +215,7 @@ export const GitCommitSelectorApp = forwardRef<{}, {
                     <Button color={isCommitWorkspace ? "blue" : "default"}
                         variant={isCommitWorkspace ? "filled" : "text"}
                         onClick={() => {
-                            updateSelectedCommit({ hash: "Workspace", message: ["Workspace"], author: "", date: "" });
+                            onSelectCommit({ hash: "Workspace", message: ["Workspace"], author: "", date: "" });
                         }}>{"Workspace"}</Button>
                     <Icon style={{
                         display: isCommitWorkspace ? "flex" : "none",
@@ -230,7 +230,7 @@ export const GitCommitSelectorApp = forwardRef<{}, {
                     <Button color={isCommitHead ? "blue" : "default"}
                         variant={isCommitHead ? "filled" : "text"}
                         onClick={() => {
-                            updateSelectedCommit({ hash: "HEAD", message: ["HEAD"], author: "", date: "" });
+                            onSelectCommit({ hash: "HEAD", message: ["HEAD"], author: "", date: "" });
                         }}>{"HEAD"}</Button>
                     <Icon style={{
                         display: isCommitHead ? "flex" : "none",
@@ -247,7 +247,7 @@ export const GitCommitSelectorApp = forwardRef<{}, {
                             variant={isCommitLastSelectedHash ? "filled" : "text"}
                             onClick={() => {
                                 if (lastSelectedHashCommit != undefined) {
-                                    updateSelectedCommit(lastSelectedHashCommit);
+                                    onSelectCommit(lastSelectedHashCommit);
                                 }
                             }}>{lastSelectedHashCommit != undefined ? lastSelectedHashCommit.hash : "To Select"}</Button>
                     </Tooltip>

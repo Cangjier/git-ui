@@ -1,6 +1,12 @@
 {
     "tabs": [
         {
+            "key": "projects",
+            "title": "Projects",
+            "url": "/git-ui/projects",
+            "icon": "project"
+        },
+        {
             "key": "file-dialog",
             "title": "File",
             "url": "/git-ui/file-dialog",
@@ -11,12 +17,6 @@
             "title": "Git",
             "url": "/git-ui/git",
             "icon": "git"
-        },
-        {
-            "key": "swig",
-            "title": "Swig",
-            "url": "/git-ui/swig",
-            "icon": "translate"
         }
     ]
 }

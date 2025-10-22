@@ -2,7 +2,7 @@ import { ConfigProvider, Input, Tree } from "antd";
 import { forwardRef, useEffect, useRef, useState } from "react";
 import { TableApp } from "../TableApp";
 import { ColumnsType } from "antd/es/table";
-import { hilightClass, hilightColor } from "../../pages/FileDialog";
+import { hilightClass, hilightColor } from "../FileDialog";
 import { useUpdate } from "../../natived";
 import { localServices } from "../../services/localServices";
 import { IGitBranch } from "../../services/interfaces";

@@ -81,3 +81,12 @@ export interface IGitBranch {
         lastCommit: IGitCommit;
     };
 }
+
+export interface INeuecaxWorkspace {
+    name: string;
+    branch: string;
+    no_sparse: boolean;
+    path: string;
+    ref: string;
+    remote: string;
+}

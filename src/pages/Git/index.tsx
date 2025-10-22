@@ -3,7 +3,7 @@ import { forwardRef, Key, useEffect, useRef, useState } from "react";
 import { ArrowDownOutlined, ArrowRightOutlined, ArrowUpOutlined, CloseOutlined, DeleteOutlined, DiffOutlined, FileAddOutlined, FileTextOutlined, RedoOutlined, SaveOutlined, SwapOutlined, UnorderedListOutlined } from "@ant-design/icons";
 import BranchesSVG from "../../svgs/Branches.svg?react";
 import { pathUtils, useModal } from "../../services/utils";
-import { FileDialog } from "../FileDialog";
+import { FileDialog } from "../../apps/FileDialog";
 import { localServices } from "../../services/localServices";
 import { IGitBranch, IGitChange, IGitLog } from "../../services/interfaces";
 import { GitBranchSelectorApp } from "../../apps/GitBranchSelectorApp";
@@ -17,6 +17,8 @@ import { GitCommitSelectorApp } from "../../apps/GitCommitSelectorApp";
 import GitCommitSVG from "../../svgs/GitCommit.svg?react";
 import { TableApp } from "../../apps/TableApp";
 import { ColumnsType } from "antd/es/table";
+import { pushProject } from "../../apps/ProjectsApp";
+import { clientServices } from "../../services/clientServices";
 
 loader.config({ monaco })
 
@@ -273,6 +275,7 @@ export const Git = forwardRef<HTMLDivElement, {}>((props, ref) => {
             await Try({ useLeftPanelLoading: true }, async () => {
                 await initializeCurrentBranchRef.current(currentFolder);
                 await initializeChangesRef.current(projectPathRef.current);
+                await pushProject(currentFolder);
             });
         }
     };
@@ -310,7 +313,7 @@ export const Git = forwardRef<HTMLDivElement, {}>((props, ref) => {
     const getCommitCode = async (commit: string, change: GitChangeRecord) => {
         let lowercaseCommit = commit.toLowerCase();
         if (lowercaseCommit == "workspace") {
-            return await localServices.file.read(`${projectPathRef.current}/${change.path}`);
+            return await localServices.neuecax.readFile(projectPathRef.current, change.path);
         }
         else if (lowercaseCommit == "head") {
             return await localServices.git.show(projectPathRef.current, change.path, "HEAD");
@@ -589,6 +592,24 @@ export const Git = forwardRef<HTMLDivElement, {}>((props, ref) => {
             }
         });
     };
+    useEffect(() => {
+        let unregister = clientServices.registerBroadcastEvent((message) => {
+            if (message.to == "all" && message.data.action == "select-project") {
+                let func = async () => {
+                    let currentFolder = message.data.project.path;
+                    await Try({ useLeftPanelLoading: true }, async () => {
+                        await initializeCurrentBranchRef.current(currentFolder);
+                        await initializeChangesRef.current(projectPathRef.current);
+                        await pushProject(currentFolder);
+                    });
+                };
+                func();
+            }
+        });
+        return () => {
+            unregister();
+        };
+    }, []);
     return <div style={{
         display: "flex",
         flexDirection: "column",
@@ -673,7 +694,7 @@ export const Git = forwardRef<HTMLDivElement, {}>((props, ref) => {
                             justifyContent: "center",
                             alignItems: "center",
                         }}>
-                            <Tooltip title="Initialize changes"><Button type="text" icon={<RedoOutlined />} onClick={onRefreshChanges} /></Tooltip>
+                            {"No changes"}
                         </div>
                         <DirectoryTree
                             titleRender={(node) => {

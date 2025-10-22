@@ -1,11 +1,11 @@
-import { forwardRef, useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { ICommonFolder, IFolderItem } from "../../services/interfaces";
 import { ArrowUpOutlined, DesktopOutlined, FileOutlined, FolderOutlined, UserOutlined } from "@ant-design/icons";
 import DiskSvg from "../../svgs/Disk.svg?react";
 import { localServices } from "../../services/localServices";
 import { Collapse, ConfigProvider, Dropdown, Input, message, Spin, Splitter, Table } from "antd";
 import { ColumnsType } from "antd/es/table";
-import { TableApp } from "../../apps/TableApp";
+import { TableApp } from "../TableApp";
 import { InjectClass, useUpdate } from "../../natived";
 import { clientServices } from "../../services/clientServices";
 // 淡蓝色
@@ -13,7 +13,11 @@ export const hilightColor = "#c6e0ff";
 export const hilightClass = InjectClass(`
     background-color: ${hilightColor};
 `);
-export const FileDialog = forwardRef<HTMLDivElement, {
+
+export interface IFileDialogRef {
+    setFolder: (path: string) => Promise<void>
+}
+export const FileDialog = forwardRef<IFileDialogRef, {
     style?: React.CSSProperties,
     defaultCurrentFolder?: string,
     onCurrentFolderChange?: (path: string) => void
@@ -190,16 +194,24 @@ export const FileDialog = forwardRef<HTMLDivElement, {
     useEffect(() => {
         props.onCurrentFolderChange?.(currentFolder);
     }, [currentFolder]);
+
     const onCurrentFolderChangeByInput = async (path: string) => {
         if (await localServices.file.directoryExists(path)) {
             updateCurrentFolder(path);
             updateCurrentFolderEditing(false);
+            await refreshCurrentFolder.current();
         } else {
             messageApi.error("Directory not found");
         }
     }
+    useImperativeHandle(ref, () => ({
+        setFolder: async (path: string) => {
+            await Try({ useLoading: false }, async () => {
+                await onCurrentFolderChangeByInput(path);
+            });
+        }
+    }));
     return <div
-        ref={ref}
         style={{
             display: "flex",
             flexDirection: "column",

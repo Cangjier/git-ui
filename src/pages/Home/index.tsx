@@ -1,7 +1,7 @@
 import React, { ReactNode, forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { Flex, InjectClass, useUpdate } from "../../natived";
 import { Avatar, Button, Card, ConfigProvider, Dropdown, Spin, Splitter } from "antd";
-import { CloseOutlined, FolderOutlined, MinusOutlined, SettingOutlined } from "@ant-design/icons";
+import { CloseOutlined, FolderOutlined, MinusOutlined, ProjectOutlined, SettingOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { localServices } from "../../services/localServices.ts";
 import SidebarSvg from "../../svgs/Sidebar.svg?react";
@@ -41,7 +41,7 @@ export const Home = forwardRef<IHomeRef, IHomeProps>((props, ref) => {
     const [loadingPercent, updateLoadingPercent, loadingPercentRef] = useUpdate<number | undefined>(undefined);
     const [loadingTip, updateLoadingTip, loadingTipRef] = useUpdate('');
     const [layoutTabs, updateLayoutTabs] = useUpdate<ILayoutTab[]>([]);
-    const [currentTab, updateCurrentTab] = useUpdate<string>(localStorage.getItem('currentTab') ?? "documents");
+    const [currentTab, updateCurrentTab] = useUpdate<string>("projects");
     const delay = async (time: number) => new Promise(resolve => setTimeout(resolve, time));
     const self = useRef<IHomeRef>({
         refresh: async (showLoading: boolean) => {
@@ -79,21 +79,32 @@ export const Home = forwardRef<IHomeRef, IHomeProps>((props, ref) => {
     useEffect(() => {
         localStorage.setItem('currentTab', currentTab);
     }, [currentTab]);
+    useEffect(() => {
+        let unregister = clientServices.registerBroadcastEvent((message) => {
+            if (message.to == "home-app" && message.data.action == "switch") {
+                updateCurrentTab(message.data.tab);
+            }
+        });
+        return () => {
+            unregister();
+        };
+    }, []);
     const renderIcon = (icon?: string) => {
         if (icon == "git") return <GitSvg></GitSvg>;
         else if (icon == "translate") return <TranslateSvg></TranslateSvg>;
         else if (icon == "folder") return <FolderOutlined />;
+        else if (icon == "project") return <ProjectOutlined />;
         else return <></>;
     };
     const renderTab = (tab: ILayoutTab) => {
         return <Button style={{
-            width: '100%',
             textAlign: 'left',
             justifyContent: 'start',
+            padding: "0px 8px",
             backgroundColor: tab.key == currentTab ? '#e6f7ff' : undefined
         }} type='text' icon={renderIcon(tab.icon)} onClick={() => {
             updateCurrentTab(tab.key);
-        }}>{tab.title}</Button>
+        }}>{ }</Button>
     };
     const renderContentByUrl = (tab: ILayoutTab) => {
         if (tab.url.startsWith('/')) {
@@ -154,7 +165,7 @@ export const Home = forwardRef<IHomeRef, IHomeProps>((props, ref) => {
                 alignItems: 'center',
                 gap: '4px',
             }}>
-                <Button type='text' icon={<SettingOutlined />} onClick={() => {
+                {/* <Button type='text' icon={<SettingOutlined />} onClick={() => {
                     let currentUrl = window.location.pathname;
                     clientServices.openUrl(currentUrl + '/settings', {
                         x: 'center',
@@ -162,12 +173,12 @@ export const Home = forwardRef<IHomeRef, IHomeProps>((props, ref) => {
                         width: '80%',
                         height: '80%'
                     }, true);
-                }}>{"Settings"}</Button>
+                }}>{"Settings"}</Button> */}
                 <Button type='text' icon={<MinusOutlined />} onClick={() => {
                     clientServices.minimize();
                 }}>{"Minimize"}</Button>
                 <Button type='text' icon={<CloseOutlined />} onClick={() => {
-                    clientServices.close();
+                    clientServices.exit();
                 }}>{"Close"}</Button>
             </div>
 
@@ -177,7 +188,7 @@ export const Home = forwardRef<IHomeRef, IHomeProps>((props, ref) => {
             height: 0,
             // boxShadow: '0 0 10px rgba(0, 0, 0, 0.1)'
         }}>
-            <Splitter.Panel defaultSize="220px" min="20px" max="50%">
+            <Splitter.Panel defaultSize="240px" min="20px" max="50%">
                 <div style={{
                     display: "flex",
                     flexDirection: "column",
