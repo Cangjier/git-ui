@@ -1,15 +1,7 @@
-import React, { ReactNode, forwardRef, useEffect, useImperativeHandle, useRef } from "react";
-import { Flex, InjectClass, useUpdate } from "../../natived";
-import { Avatar, Button, Card, ConfigProvider, Dropdown, Spin, Splitter } from "antd";
-import { CloseOutlined, FolderOutlined, MinusOutlined, ProjectOutlined, SettingOutlined } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
-import { localServices } from "../../services/localServices.ts";
-import SidebarSvg from "../../svgs/Sidebar.svg?react";
-import Icon from "@ant-design/icons/lib/components/Icon";
-import { IUserInfomation } from "../../services/interfaces.ts";
-import { useLocalStorageListener } from "../../services/utils.ts";
-import DocumentsSvg from "../../svgs/Documents.svg?react";
-import WorkspacesSvg from "../../svgs/Workspaces.svg?react";
+import React, { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import { InjectClass, useUpdate } from "../../natived";
+import { Button, Spin, Splitter } from "antd";
+import { CloseOutlined, FolderOutlined, MinusOutlined, ProjectOutlined } from "@ant-design/icons";
 import { clientServices } from "../../services/clientServices.ts";
 import { remoteServices } from "../../services/remoteServices.ts";
 import GitSvg from "../../svgs/Git.svg?react";
@@ -35,17 +27,34 @@ export interface ILayoutTab {
     url: string
 }
 
-
+export const homeAppName = "home-app";
+export const homeAppActions = {
+    switch: "switch",
+}
+export const broadcastSwitchToHome = (tab: string, from: string) => {
+    clientServices.broadcast({
+        is_broadcast_message: true,
+        from: from,
+        to: homeAppName,
+        data: { action: homeAppActions.switch, tab: tab }
+    });
+};
 export const Home = forwardRef<IHomeRef, IHomeProps>((props, ref) => {
-    const [loading, updateLoading, loadingRef] = useUpdate(0);
-    const [loadingPercent, updateLoadingPercent, loadingPercentRef] = useUpdate<number | undefined>(undefined);
-    const [loadingTip, updateLoadingTip, loadingTipRef] = useUpdate('');
+    const [loading, updateLoading, loadingRef] = useUpdate<{
+        loading: number,
+        percent: number | undefined,
+        message: string | undefined
+    }>({
+        loading: 0,
+        percent: undefined,
+        message: undefined
+    });
     const [layoutTabs, updateLayoutTabs] = useUpdate<ILayoutTab[]>([]);
     const [currentTab, updateCurrentTab] = useUpdate<string>("projects");
     const delay = async (time: number) => new Promise(resolve => setTimeout(resolve, time));
     const self = useRef<IHomeRef>({
         refresh: async (showLoading: boolean) => {
-            if (showLoading) updateLoading(loading => loading + 1);
+            if (showLoading) updateLoading(loading => ({ ...loading, loading: loading.loading + 1 }));
             try {
                 while (true) {
                     try {
@@ -63,7 +72,7 @@ export const Home = forwardRef<IHomeRef, IHomeProps>((props, ref) => {
                 console.log(e);
             }
             if (showLoading) {
-                updateLoading(loading => loading - 1);
+                updateLoading(loading => ({ ...loading, loading: loading.loading - 1 }));
             }
         },
         refreshLayoutTabs: async () => {
@@ -81,7 +90,7 @@ export const Home = forwardRef<IHomeRef, IHomeProps>((props, ref) => {
     }, [currentTab]);
     useEffect(() => {
         let unregister = clientServices.registerBroadcastEvent((message) => {
-            if (message.to == "home-app" && message.data.action == "switch") {
+            if (message.to == homeAppName && message.data.action == homeAppActions.switch) {
                 updateCurrentTab(message.data.tab);
             }
         });
@@ -125,7 +134,7 @@ export const Home = forwardRef<IHomeRef, IHomeProps>((props, ref) => {
     }}>
         <Spin size={'large'} tip={<div style={{
             marginTop: '32px'
-        }}>{loadingTip}</div>} percent={loadingPercent} spinning={loading > 0} fullscreen></Spin>
+        }}>{loading.message}</div>} percent={loading.percent} spinning={loading.loading > 0} fullscreen></Spin>
         {/* 顶部 */}
         <div style={{
             backgroundColor: '#fff',
@@ -165,15 +174,6 @@ export const Home = forwardRef<IHomeRef, IHomeProps>((props, ref) => {
                 alignItems: 'center',
                 gap: '4px',
             }}>
-                {/* <Button type='text' icon={<SettingOutlined />} onClick={() => {
-                    let currentUrl = window.location.pathname;
-                    clientServices.openUrl(currentUrl + '/settings', {
-                        x: 'center',
-                        y: "center",
-                        width: '80%',
-                        height: '80%'
-                    }, true);
-                }}>{"Settings"}</Button> */}
                 <Button type='text' icon={<MinusOutlined />} onClick={() => {
                     clientServices.minimize();
                 }}>{"Minimize"}</Button>
@@ -185,8 +185,7 @@ export const Home = forwardRef<IHomeRef, IHomeProps>((props, ref) => {
         </div>
         <Splitter style={{
             flex: 1,
-            height: 0,
-            // boxShadow: '0 0 10px rgba(0, 0, 0, 0.1)'
+            height: 0
         }}>
             <Splitter.Panel defaultSize="240px" min="20px" max="50%">
                 <div style={{

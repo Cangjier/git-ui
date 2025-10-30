@@ -146,12 +146,14 @@ const LocalServices = () => {
             }).name;
         };
         const revealFileInExplorer = async (path: string) => {
+            path = path.replace(/\//g, "\\");
             await run("file", {
                 action: "reveal-file-in-explorer",
                 path
             });
         };
         const openDirectoryInExplorer = async (path: string) => {
+            path = path.replace(/\//g, "\\");
             await run("file", {
                 action: "open-directory-in-explorer",
                 path
@@ -240,10 +242,13 @@ const LocalServices = () => {
             });
         };
 
-        const fetch = async (path: string) => {
+        const fetch = async (path: string, options: {
+            prune?: boolean
+        }) => {
             return await runGit({
                 action: "fetch",
-                path
+                path,
+                fetchOptions: options
             });
         };
 
@@ -425,8 +430,17 @@ const LocalServices = () => {
             }).content;
         };
 
+        const readOrShowHead = async (path: string, targetFile: string) => {
+            return (await runGit({
+                action: "read-or-show-head",
+                path,
+                targetFile
+            }) as {
+                content: string
+            }).content;
+        };
+
         const getCommits = async (path: string, branch: string, options: {
-            count?: number,
             searchKeywords?: string[],
             searchAuthor?: string
         }) => {
@@ -434,7 +448,6 @@ const LocalServices = () => {
                 action: "get-commits",
                 path,
                 branch,
-                count: options.count,
                 searchKeywords: options.searchKeywords,
                 searchAuthor: options.searchAuthor
             }) as {
@@ -528,6 +541,7 @@ const LocalServices = () => {
             resetHard,
             getRemotes,
             show,
+            readOrShowHead,
             getCommits,
             diff
         };
@@ -566,10 +580,35 @@ const LocalServices = () => {
                 content: content
             });
         };
+        const removeWorkspace = async (workspaceName: string) => {
+            await run("neuecax", {
+                action: "remove-workspace",
+                workspaceName: workspaceName
+            });
+        };
+        const openWorkspace = async (workspaceName: string) => {
+            await run("neuecax", {
+                action: "open-workspace",
+                workspaceName: workspaceName
+            });
+        };
+        const createWorkspace = async (workspaceName: string, workspaceDirectory: string, ipDirectory: string, branchName: string, noSparse?: boolean) => {
+            await run("neuecax", {
+                action: "create-workspace",
+                workspaceName: workspaceName,
+                workspaceDirectory: workspaceDirectory,
+                ipDirectory: ipDirectory,
+                branchName: branchName,
+                noSparse: noSparse
+            });
+        };
         return {
             listWorkspaces,
             readFile,
-            writeFile
+            writeFile,
+            removeWorkspace,
+            openWorkspace,
+            createWorkspace
         };
     };
 

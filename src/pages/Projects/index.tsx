@@ -13,8 +13,10 @@ export const Projects = forwardRef<HTMLDivElement, {
         ...props.style
     }}>
         <ProjectsApp style={{
-            width: "60vw",
-            height: "80vh"
+            padding: "10px",
+            borderRadius: "10px",
+            width: "calc(60vw - 20px)",
+            height: "calc(80vh - 20px)"
         }} />
     </div>
 });

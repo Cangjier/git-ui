@@ -1,6 +1,6 @@
-import { Button, Input, message, Select, Spin, Splitter, Tooltip } from "antd";
+import { Button, Dropdown, Input, message, Select, Spin, Splitter, Tooltip } from "antd";
 import { forwardRef, Key, useEffect, useRef, useState } from "react";
-import { ArrowDownOutlined, ArrowRightOutlined, ArrowUpOutlined, CloseOutlined, DeleteOutlined, DiffOutlined, FileAddOutlined, FileTextOutlined, RedoOutlined, SaveOutlined, SwapOutlined, UnorderedListOutlined } from "@ant-design/icons";
+import { ArrowDownOutlined, ArrowRightOutlined, ArrowUpOutlined, CloseOutlined, DeleteOutlined, DiffOutlined, ExpandOutlined, FileAddOutlined, FileTextOutlined, GithubOutlined, NodeCollapseOutlined, NodeExpandOutlined, RedoOutlined, SaveOutlined, SwapOutlined, UnorderedListOutlined } from "@ant-design/icons";
 import BranchesSVG from "../../svgs/Branches.svg?react";
 import { pathUtils, useModal } from "../../services/utils";
 import { FileDialog } from "../../apps/FileDialog";
@@ -10,14 +10,16 @@ import { GitBranchSelectorApp } from "../../apps/GitBranchSelectorApp";
 import { InjectClass, useUpdate } from "../../natived";
 import { DiffEditor, DiffOnMount, Editor, loader } from "@monaco-editor/react";
 import * as monaco from 'monaco-editor'
-import DirectoryTree from "antd/es/tree/DirectoryTree";
+import DirectoryTree, { DirectoryTreeProps } from "antd/es/tree/DirectoryTree";
+import Tree from "antd/es/tree";
 import { EventDataNode } from "antd/es/tree";
 import DotSVG from "../../svgs/Dot.svg?react";
 import { GitCommitSelectorApp } from "../../apps/GitCommitSelectorApp";
 import GitCommitSVG from "../../svgs/GitCommit.svg?react";
+import DiscardSVG from "../../svgs/Discard.svg?react";
 import { TableApp } from "../../apps/TableApp";
 import { ColumnsType } from "antd/es/table";
-import { pushProject } from "../../apps/ProjectsApp";
+import { historyAppActions, pushHistory } from "../../apps/ProjectsApp";
 import { clientServices } from "../../services/clientServices";
 
 loader.config({ monaco })
@@ -106,6 +108,7 @@ export const Git = forwardRef<HTMLDivElement, {}>((props, ref) => {
     const [diffOldCommit, updateDiffOldCommit, diffOldCommitRef] = useUpdate<IGitLog>({ hash: "HEAD", message: ["HEAD"], author: "", date: "" });
     const [diffNewCommit, updateDiffNewCommit, diffNewCommitRef] = useUpdate<IGitLog>({ hash: "Workspace", message: ["Workspace"], author: "", date: "" });
     const [modifiedChanged, updateModifiedChanged] = useState(false);
+    const [changesTreeExpandedKeys, updateChangesTreeExpandedKeys] = useState<Key[]>([]);
     const modifiedRawRef = useRef("");
     const modifiedWordWrapRef = useRef<"on" | "off" | "wordWrapColumn" | "bounded" | undefined>("on");
     const [leftPanelLoading, updateLeftPanelLoading, leftPanelLoadingRef] = useUpdate({
@@ -121,6 +124,7 @@ export const Git = forwardRef<HTMLDivElement, {}>((props, ref) => {
     const [rightPanelView, updateRightPanelView, rightPanelViewRef] = useUpdate<"info" | "diff" | "merge">("info");
     const diffEditorRef = useRef<monaco.editor.IStandaloneDiffEditor>(null);
     const diffModifiedChangeRef = useRef<GitChangeRecord>(null);
+
     const Try = async (options: {
         useLeftPanelLoading?: boolean,
         useRightPanelLoading?: boolean
@@ -275,7 +279,7 @@ export const Git = forwardRef<HTMLDivElement, {}>((props, ref) => {
             await Try({ useLeftPanelLoading: true }, async () => {
                 await initializeCurrentBranchRef.current(currentFolder);
                 await initializeChangesRef.current(projectPathRef.current);
-                await pushProject(currentFolder);
+                await pushHistory(currentFolder);
             });
         }
     };
@@ -313,7 +317,7 @@ export const Git = forwardRef<HTMLDivElement, {}>((props, ref) => {
     const getCommitCode = async (commit: string, change: GitChangeRecord) => {
         let lowercaseCommit = commit.toLowerCase();
         if (lowercaseCommit == "workspace") {
-            return await localServices.neuecax.readFile(projectPathRef.current, change.path);
+            return await localServices.git.readOrShowHead(projectPathRef.current, change.path);
         }
         else if (lowercaseCommit == "head") {
             return await localServices.git.show(projectPathRef.current, change.path, "HEAD");
@@ -514,93 +518,314 @@ export const Git = forwardRef<HTMLDivElement, {}>((props, ref) => {
         modifiedRawRef.current = "";
     };
     const onCommit = async () => {
-        if (commitMessageRef.current == "") {
-            messageApi.error("Please enter commit message");
-            return;
-        }
-        let changes = await localServices.git.diff(projectPathRef.current, "HEAD", "Workspace");
-        if (changes.length == 0) {
-            messageApi.error("No changes to commit");
-            return;
-        }
-        let accept = await showModal((self) => {
-            const data: GitChangeRecord[] = convertToGitChangeRecord(changes);
-            return <div style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "10px",
-            }}>
-                <div style={{ fontWeight: "bold", fontSize: "16px" }}>Are you sure to commit?</div>
-                <DirectoryTree
-                    titleRender={(node) => {
-                        if (node.isLeaf == false) return node.title;
-                        if (node.status == "deleted") {
-                            return <span style={{
-                                alignItems: "center",
-                                textDecoration: "line-through"
-                            }}>
-                                {node.title}
-                                <span style={{
-                                    marginLeft: "5px"
-                                }} />
-                                <Tooltip title="Deleted"><DeleteOutlined /></Tooltip>
-                            </span>
-                        }
-                        else if (node.status == "untracked") {
-                            return <span style={{
-                                alignItems: "center",
-                            }}>
-                                {node.title}
-                                <span style={{
-                                    marginLeft: "5px"
-                                }} />
-                                <Tooltip title="Untracked"><FileAddOutlined /></Tooltip>
-                            </span>
-                        }
-                        else if (node.status == "modified") {
-                            return <span style={{
-                                alignItems: "center",
-                            }}>
-                                {node.title}
-                                <span style={{
-                                    marginLeft: "5px"
-                                }} />
-                                <Tooltip title="Modified"><DiffOutlined /></Tooltip>
-                            </span>
-                        }
-                    }}
-                    style={{
-                        flex: 1
-                    }}
-                    defaultExpandAll
-                    treeData={data} />
-            </div>
-        }, {
-            width: "80vw",
-            bodyStyles: {
-                height: "65vh"
+        await Try({ useLeftPanelLoading: true }, async () => {
+            if (commitMessageRef.current == "") {
+                messageApi.error("Please enter commit message");
+                return;
             }
-        });
-        if (accept == false) {
-            return;
-        }
-        await Try({ useLeftPanelLoading: true, useRightPanelLoading: true }, async () => {
-            await localServices.git.add(projectPathRef.current);
-            await localServices.git.commit(projectPathRef.current, commitMessageRef.current);
-            if (diffOldCommitRef.current.hash.toLowerCase() == "head" && diffNewCommitRef.current.hash.toLowerCase() == "workspace") {
-                await initializeChangesRef.current(projectPathRef.current);
+            let changes = await localServices.git.diff(projectPathRef.current, "HEAD", "Workspace");
+            if (changes.length == 0) {
+                messageApi.error("No changes to commit");
+                return;
             }
+            let accept = await showModal((self) => {
+                const data: GitChangeRecord[] = convertToGitChangeRecord(changes);
+                return <div style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "10px",
+                }}>
+                    <div style={{ fontWeight: "bold", fontSize: "16px" }}>Are you sure to commit?</div>
+                    <DirectoryTree
+                        titleRender={(node) => {
+                            if (node.isLeaf == false) return node.title;
+                            if (node.status == "deleted") {
+                                return <span style={{
+                                    alignItems: "center",
+                                    textDecoration: "line-through"
+                                }}>
+                                    {node.title}
+                                    <span style={{
+                                        marginLeft: "5px"
+                                    }} />
+                                    <Tooltip title="Deleted"><DeleteOutlined /></Tooltip>
+                                </span>
+                            }
+                            else if (node.status == "untracked") {
+                                return <span style={{
+                                    alignItems: "center",
+                                }}>
+                                    {node.title}
+                                    <span style={{
+                                        marginLeft: "5px"
+                                    }} />
+                                    <Tooltip title="Untracked"><FileAddOutlined /></Tooltip>
+                                </span>
+                            }
+                            else if (node.status == "modified") {
+                                return <span style={{
+                                    alignItems: "center",
+                                }}>
+                                    {node.title}
+                                    <span style={{
+                                        marginLeft: "5px"
+                                    }} />
+                                    <Tooltip title="Modified"><DiffOutlined /></Tooltip>
+                                </span>
+                            }
+                        }}
+                        style={{
+                            flex: 1
+                        }}
+                        defaultExpandAll
+                        treeData={data} />
+                </div>
+            }, {
+                width: "80vw",
+                bodyStyles: {
+                    height: "65vh"
+                }
+            });
+            if (accept == false) {
+                return;
+            }
+            await Try({ useLeftPanelLoading: true, useRightPanelLoading: true }, async () => {
+                await localServices.git.add(projectPathRef.current);
+                await localServices.git.commit(projectPathRef.current, commitMessageRef.current);
+                if (diffOldCommitRef.current.hash.toLowerCase() == "head" && diffNewCommitRef.current.hash.toLowerCase() == "workspace") {
+                    await initializeChangesRef.current(projectPathRef.current);
+                }
+            });
         });
     };
+    const onGitPull = async () => {
+        await Try({ useLeftPanelLoading: true }, async () => {
+            let changes = await localServices.git.diff(projectPathRef.current, "HEAD", "Workspace");
+            if (changes.length != 0) {
+                messageApi.error("There are changes to pull, please commit or discard them first");
+                return;
+            }
+            await Try({ useLeftPanelLoading: true }, async () => {
+                await localServices.git.pull(projectPathRef.current);
+                await initializeChangesRef.current(projectPathRef.current);
+            });
+        });
+    };
+
+    const onGitPush = async () => {
+        await Try({ useLeftPanelLoading: true }, async () => {
+            let changes = await localServices.git.diff(projectPathRef.current, "HEAD", "Workspace");
+            if (changes.length != 0) {
+                messageApi.error("There are changes to push, please commit or discard them first");
+                return;
+            }
+            await Try({ useLeftPanelLoading: true }, async () => {
+                await localServices.git.push(projectPathRef.current);
+                await initializeChangesRef.current(projectPathRef.current);
+            });
+        });
+    };
+
+    const onCommitAndPush = async () => {
+        await Try({ useLeftPanelLoading: true }, async () => {
+            if (commitMessageRef.current == "") {
+                messageApi.error("Please enter commit message");
+                return;
+            }
+            let changes = await localServices.git.diff(projectPathRef.current, "HEAD", "Workspace");
+            if (changes.length == 0) {
+                messageApi.error("No changes to commit");
+                return;
+            }
+            let accept = await showModal((self) => {
+                const data: GitChangeRecord[] = convertToGitChangeRecord(changes);
+                return <div style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "10px",
+                }}>
+                    <div style={{ fontWeight: "bold", fontSize: "16px" }}>Are you sure to commit?</div>
+                    <DirectoryTree
+                        titleRender={(node) => {
+                            if (node.isLeaf == false) return node.title;
+                            if (node.status == "deleted") {
+                                return <span style={{
+                                    alignItems: "center",
+                                    textDecoration: "line-through"
+                                }}>
+                                    {node.title}
+                                    <span style={{
+                                        marginLeft: "5px"
+                                    }} />
+                                    <Tooltip title="Deleted"><DeleteOutlined /></Tooltip>
+                                </span>
+                            }
+                            else if (node.status == "untracked") {
+                                return <span style={{
+                                    alignItems: "center",
+                                }}>
+                                    {node.title}
+                                    <span style={{
+                                        marginLeft: "5px"
+                                    }} />
+                                    <Tooltip title="Untracked"><FileAddOutlined /></Tooltip>
+                                </span>
+                            }
+                            else if (node.status == "modified") {
+                                return <span style={{
+                                    alignItems: "center",
+                                }}>
+                                    {node.title}
+                                    <span style={{
+                                        marginLeft: "5px"
+                                    }} />
+                                    <Tooltip title="Modified"><DiffOutlined /></Tooltip>
+                                </span>
+                            }
+                        }}
+                        style={{
+                            flex: 1
+                        }}
+                        defaultExpandAll
+                        treeData={data} />
+                </div>
+            }, {
+                width: "80vw",
+                bodyStyles: {
+                    height: "65vh"
+                }
+            });
+            if (accept == false) {
+                return;
+            }
+            await Try({ useLeftPanelLoading: true, useRightPanelLoading: true }, async () => {
+                await localServices.git.add(projectPathRef.current);
+                await localServices.git.commit(projectPathRef.current, commitMessageRef.current);
+                await localServices.git.push(projectPathRef.current);
+                if (diffOldCommitRef.current.hash.toLowerCase() == "head" && diffNewCommitRef.current.hash.toLowerCase() == "workspace") {
+                    await initializeChangesRef.current(projectPathRef.current);
+                }
+            });
+        });
+    };
+
+    const onGitDiscard = async () => {
+        await Try({ useLeftPanelLoading: true }, async () => {
+            let changes = await localServices.git.diff(projectPathRef.current, "HEAD", "Workspace");
+            if (changes.length == 0) {
+                messageApi.error("No changes to discard");
+                return;
+            }
+            let accept = await showModal((self) => {
+                const data: GitChangeRecord[] = convertToGitChangeRecord(changes);
+                return <div style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "10px",
+                }}>
+                    <div style={{ fontWeight: "bold", fontSize: "16px" }}>Are you sure to discard all changes?</div>
+                    <DirectoryTree
+                        titleRender={(node) => {
+                            if (node.isLeaf == false) return node.title;
+                            if (node.status == "deleted") {
+                                return <span style={{
+                                    alignItems: "center",
+                                    textDecoration: "line-through"
+                                }}>
+                                    {node.title}
+                                    <span style={{
+                                        marginLeft: "5px"
+                                    }} />
+                                    <Tooltip title="Deleted"><DeleteOutlined /></Tooltip>
+                                </span>
+                            }
+                            else if (node.status == "untracked") {
+                                return <span style={{
+                                    alignItems: "center",
+                                }}>
+                                    {node.title}
+                                    <span style={{
+                                        marginLeft: "5px"
+                                    }} />
+                                    <Tooltip title="Untracked"><FileAddOutlined /></Tooltip>
+                                </span>
+                            }
+                            else if (node.status == "modified") {
+                                return <span style={{
+                                    alignItems: "center",
+                                }}>
+                                    {node.title}
+                                    <span style={{
+                                        marginLeft: "5px"
+                                    }} />
+                                    <Tooltip title="Modified"><DiffOutlined /></Tooltip>
+                                </span>
+                            }
+                        }}
+                        style={{
+                            flex: 1
+                        }}
+                        defaultExpandAll
+                        treeData={data} />
+                </div>
+            }, {
+                width: "80vw",
+                bodyStyles: {
+                    height: "65vh"
+                }
+            });
+            if (accept == false) {
+                return;
+            }
+            await Try({ useLeftPanelLoading: true }, async () => {
+                await localServices.git.resetHard(projectPathRef.current);
+                await localServices.git.cleanFd(projectPathRef.current);
+                await initializeChangesRef.current(projectPathRef.current);
+            });
+        });
+    };
+
+    const onExpandAllChanges = () => {
+        // get all keys, include children, iterate all nodes
+        let keys: Key[] = [];
+        let iterate = (nodes: GitChangeRecord[]) => {
+            for (const node of nodes) {
+                keys.push(node.key);
+                if (node.children != undefined) {
+                    iterate(node.children);
+                }
+            }
+        };
+        iterate(changesRef.current ?? []);
+        updateChangesTreeExpandedKeys(keys);
+    };
+
+    const onExpandChanges = (expandedKeys: Key[], info: {
+        node: EventDataNode<GitChangeRecord>;
+        expanded: boolean;
+        nativeEvent: MouseEvent;
+    }) => {
+        if (info.expanded) {
+            updateChangesTreeExpandedKeys(expandedKeys);
+        } else {
+            updateChangesTreeExpandedKeys(expandedKeys.filter((key) => key != info.node.key));
+        }
+    };
+
+    const onCollapseAllChanges = () => {
+        updateChangesTreeExpandedKeys([]);
+    };
+
+
     useEffect(() => {
         let unregister = clientServices.registerBroadcastEvent((message) => {
-            if (message.to == "all" && message.data.action == "select-project") {
+            if (message.to == "all" && message.data.action == historyAppActions.selectHistory) {
                 let func = async () => {
-                    let currentFolder = message.data.project.path;
+                    let currentFolder = message.data.history.path;
                     await Try({ useLeftPanelLoading: true }, async () => {
                         await initializeCurrentBranchRef.current(currentFolder);
                         await initializeChangesRef.current(projectPathRef.current);
-                        await pushProject(currentFolder);
+                        await pushHistory(currentFolder);
                     });
                 };
                 func();
@@ -635,22 +860,48 @@ export const Git = forwardRef<HTMLDivElement, {}>((props, ref) => {
                         display: "flex",
                         flexDirection: "row",
                         gap: "5px",
-                        alignItems: "center"
+                        alignItems: "center",
+                        flexWrap: "wrap"
                     }}>
-                        <div style={{
-                            cursor: "pointer",
-                            fontWeight: "bold"
-                        }} onClick={onSelectProject}>{projectPath != "" ? pathUtils.getFileName(projectPath) : "Select Project"}</div>
+                        <Button size={"small"}
+                            type="text"
+                            icon={<GithubOutlined />}
+                            onClick={onSelectProject}>{projectPath != "" ? pathUtils.getFileName(projectPath) : "Select Project"}</Button>
                         {projectPath != "" && currentBranch != undefined &&
                             <Button size={"small"}
                                 type="text"
                                 icon={<BranchesSVG />}
                                 onClick={onSelectBranch}>{currentBranch.name}</Button>}
                         {projectPath != "" && currentBranch != undefined &&
-                            <Button size={"small"}
+                            <Tooltip title="Refresh changes"><Button size={"small"}
                                 type="text"
                                 icon={<RedoOutlined />}
-                                onClick={onRefreshChanges} />}
+                                onClick={onRefreshChanges} ></Button></Tooltip>}
+                        {projectPath != "" && currentBranch != undefined &&
+                            <Tooltip title="Push to remote"><Button size={"small"}
+                                type="text"
+                                icon={<ArrowUpOutlined />}
+                                onClick={onGitPush} ></Button></Tooltip>}
+                        {projectPath != "" && currentBranch != undefined &&
+                            <Tooltip title="Pull from remote"><Button size={"small"}
+                                type="text"
+                                icon={<ArrowDownOutlined />}
+                                onClick={onGitPull} ></Button></Tooltip>}
+                        {projectPath != "" && currentBranch != undefined &&
+                            <Tooltip title="Discard all changes"><Button size={"small"}
+                                type="text"
+                                icon={<DiscardSVG />}
+                                onClick={onGitDiscard} ></Button></Tooltip>}
+                        {projectPath != "" && currentBranch != undefined &&
+                            <Tooltip title="Expand all changes"><Button size={"small"}
+                                type="text"
+                                icon={<NodeExpandOutlined />}
+                                onClick={onExpandAllChanges} ></Button></Tooltip>}
+                        {projectPath != "" && currentBranch != undefined &&
+                            <Tooltip title="Collapse all changes"><Button size={"small"}
+                                type="text"
+                                icon={<NodeCollapseOutlined />}
+                                onClick={onCollapseAllChanges} ></Button></Tooltip>}
                     </div>
                     {/* Commit Message */}
                     <Input.TextArea
@@ -663,7 +914,19 @@ export const Git = forwardRef<HTMLDivElement, {}>((props, ref) => {
                         defaultValue={commitMessage}
                         onBlur={(e) => updateCommitMessage(e.target.value)} />
                     {projectPath != "" && currentBranch != undefined &&
-                        <Button type="primary" onClick={onCommit}>Commit</Button>}
+                        <Dropdown menu={{
+                            items: [
+                                {
+                                    label: <div style={{
+                                        display: "flex",
+                                        justifyContent: "center",
+                                        alignItems: "center",
+                                    }}>{"Commit and Push"}</div>,
+                                    key: "CommitAndPush",
+                                    onClick: onCommitAndPush
+                                }
+                            ]
+                        }}><Button type="primary" onClick={onCommit}>Commit</Button></Dropdown>}
                     {/* Changes */}
                     <div style={{
                         display: currentBranch == undefined ? 'none' : 'flex',
@@ -680,11 +943,17 @@ export const Git = forwardRef<HTMLDivElement, {}>((props, ref) => {
                             borderRadius: "5px",
                             backgroundColor: "#eee"
                         }}>
-                            <Tooltip title={diffOldCommit.message.join("\n")}>
+                            <Tooltip title={<div style={{
+                                maxHeight: "200px",
+                                overflowY: "auto"
+                            }}>{diffOldCommit.message.map((item) => <div>{item}</div>)}</div>}>
                                 <Button style={{ flex: 1 }} size={"small"} type="text" onClick={() => onSelectCompareCommit("left")}>{diffOldCommit.hash}</Button>
                             </Tooltip>
                             <Tooltip title="Swap compare commit"><Button size={"small"} type="text" icon={<SwapOutlined />} onClick={onSwapCompareCommit} /></Tooltip>
-                            <Tooltip title={diffNewCommit.message.join("\n")}>
+                            <Tooltip title={<div style={{
+                                maxHeight: "200px",
+                                overflowY: "auto"
+                            }}>{diffNewCommit.message.map((item) => <div key={item}>{item}</div>)}</div>}>
                                 <Button style={{ flex: 1 }} size={"small"} type="text" onClick={() => onSelectCompareCommit("right")}>{diffNewCommit.hash}</Button>
                             </Tooltip>
                         </div>
@@ -697,6 +966,9 @@ export const Git = forwardRef<HTMLDivElement, {}>((props, ref) => {
                             {"No changes"}
                         </div>
                         <DirectoryTree
+                            expandedKeys={changesTreeExpandedKeys}
+                            onExpand={onExpandChanges}
+                            blockNode={true}
                             titleRender={(node) => {
                                 if (node.isLeaf == false) return node.title;
                                 if (node.status == "deleted") {

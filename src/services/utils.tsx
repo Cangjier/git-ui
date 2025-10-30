@@ -75,6 +75,8 @@ export interface IUseModalOptions {
     style?: React.CSSProperties,
     width?: string | number | Partial<Record<Breakpoint, string | number>>,
     height?: string | number,
+    onCancelPredicate?: () => boolean,
+    onOkPredicate?: () => Promise<boolean>,
 }
 
 export function useModal() {
@@ -91,6 +93,8 @@ export function useModal() {
     const [style, setStyle] = useState<React.CSSProperties | undefined>(undefined);
     const [width, setWidth] = useState<string | number | Partial<Record<Breakpoint, string | number>> | undefined>(undefined);
     const [height, setHeight] = useState<string | number | undefined>(undefined);
+    const onCancelPredicateRef = useRef<() => boolean>(() => true);
+    const onOkPredicateRef = useRef<() => Promise<boolean>>(() => Promise.resolve(true));
     const self = useRef<IUseModalSelf>({
         setVisible
     });
@@ -109,6 +113,8 @@ export function useModal() {
             setStyle(options?.style);
             setWidth(options?.width);
             setHeight(options?.height);
+            onCancelPredicateRef.current = options?.onCancelPredicate ?? (() => true);
+            onOkPredicateRef.current = options?.onOkPredicate ?? (() => Promise.resolve(true));
             setVisible(true);
         });
     }, []);
@@ -121,9 +127,17 @@ export function useModal() {
 
     const modalContainer = <Modal
         open={visible}
-        onCancel={() => close(false)
+        onCancel={() => {
+            if (onCancelPredicateRef.current()) {
+                close(false);
+            }
         }
-        onOk={() => close(true)}
+        }
+        onOk={async () => {
+            if (await onOkPredicateRef.current()) {
+                close(true);
+            }
+        }}
         maskClosable={false}
         footer={footer}
         style={style}
@@ -156,6 +170,10 @@ const pathUtilsConstructor = () => {
         const normalizedPath = path.replace(/\\/g, "/");
         return normalizedPath.split("/").pop() ?? "";
     };
+    const getDirectoryName = (path: string) => {
+        const normalizedPath = path.replace(/\\/g, "/");
+        return normalizedPath.substring(0, normalizedPath.lastIndexOf("/"));
+    }
     const getFileNameWithoutExtension = (path: string) => {
         const normalizedPath = path.replace(/\\/g, "/");
         const fileName = normalizedPath.split("/").pop() ?? "";
@@ -174,6 +192,7 @@ const pathUtilsConstructor = () => {
         getFileName,
         getFileNameWithoutExtension,
         getFileExtension,
+        getDirectoryName,
     };
 }
 

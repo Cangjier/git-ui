@@ -11,6 +11,7 @@ import { TableApp } from "../TableApp";
 import { ColumnsType } from "antd/es/table";
 import { useUpdate } from "../../natived";
 import { MessageInstance } from "antd/es/message/interface";
+import { DirectoryTreeProps } from "antd/es/tree";
 
 export interface GitCommitRecord extends IGitCommit {
     key: string;
@@ -45,6 +46,7 @@ export const GitCommitSelectorApp = forwardRef<{}, {
         perence: undefined as string | undefined,
         message: undefined as string | undefined
     });
+    
     const Try = async (options: {
         useLoading?: boolean
     }, callback: () => Promise<void>) => {
@@ -123,7 +125,8 @@ export const GitCommitSelectorApp = forwardRef<{}, {
             },
             contentStyles: {
                 padding: "50px 10px 10px 10px"
-            }
+            },
+            width: "80vw",
         });
         if (accept == false) {
             return;
