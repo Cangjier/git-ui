@@ -304,7 +304,9 @@ const LocalServices = () => {
         };
 
         const switchBranch = async (path: string, branch: string, switchOptions: {
-            createLocalBranch?: boolean
+            createLocalBranch?: boolean,
+            trackRemoteBranch?: string,
+            detach?: boolean
         }) => {
             return await runGit({
                 action: "switch-branch",

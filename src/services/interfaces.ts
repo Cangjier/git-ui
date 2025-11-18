@@ -72,6 +72,7 @@ export interface IGitCommit {
 export interface IGitBranch {
     type: "local" | "remote"; // 分支类型
     name: string;             // 分支名称
+    detached?: boolean;        // 是否为 detached 状态
     lastCommit: IGitCommit;
     ref?: {                   // 可选，分支引用信息
         name: string;         // 引用名称

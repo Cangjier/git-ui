@@ -34,6 +34,8 @@ export const GitCommitSelectorApp = forwardRef<{}, {
     defaultSelectedCommit?: IGitLog;
     style?: React.CSSProperties;
     messageApi: MessageInstance;
+    enableWorkspace?: boolean;
+    enableModifyBranch?: boolean;
     onSelect: (commit: IGitLog) => void;
 }>((props, ref) => {
     const { showModal, modalContainer } = useModal();
@@ -209,13 +211,13 @@ export const GitCommitSelectorApp = forwardRef<{}, {
                 alignItems: "center"
             }}>
                 <BranchesSVG />
-                <Button onClick={onSelectBranch}>{currentBranch?.name}</Button>
+                <Button disabled={props.enableModifyBranch === false} onClick={onSelectBranch}>{props.defaultBranch?.detached ? "Detached HEAD" : currentBranch?.name}</Button>
                 <span style={{ width: "10px" }} />
                 <GitCommitSVG />
                 <div style={{
                     position: "relative",
                 }}>
-                    <Button color={isCommitWorkspace ? "blue" : "default"}
+                    <Button disabled={props.enableWorkspace === false} color={isCommitWorkspace ? "blue" : "default"}
                         variant={isCommitWorkspace ? "filled" : "text"}
                         onClick={() => {
                             onSelectCommit({ hash: "Workspace", message: ["Workspace"], author: "", date: "" });
@@ -234,7 +236,7 @@ export const GitCommitSelectorApp = forwardRef<{}, {
                         variant={isCommitHead ? "filled" : "text"}
                         onClick={() => {
                             onSelectCommit({ hash: "HEAD", message: ["HEAD"], author: "", date: "" });
-                        }}>{"HEAD"}</Button>
+                        }}>{props.defaultBranch?.detached ? "git switch -" : "HEAD"}</Button>
                     <Icon style={{
                         display: isCommitHead ? "flex" : "none",
                         position: "absolute",

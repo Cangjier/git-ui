@@ -96,6 +96,21 @@ const convertToGitChangeRecord = (changes: IGitChange[]): GitChangeRecord[] => {
     return buildTree(changes);
 };
 
+const trimCommitHash = (hash: string | undefined | null) => {
+    if (hash == undefined || hash == null) {
+        return "HEAD";
+    }
+    if (hash.toLowerCase() == "head") {
+        return "HEAD";
+    }
+    else if (hash.toLowerCase() == "workspace") {
+        return "Workspace";
+    }
+    else {
+        return hash.substring(0, 7);
+    }
+};
+
 export const Git = forwardRef<HTMLDivElement, {}>((props, ref) => {
     const [messageApi, messageContextHolder] = message.useMessage();
     const { showModal, modalContainer } = useModal();
@@ -206,7 +221,8 @@ export const Git = forwardRef<HTMLDivElement, {}>((props, ref) => {
                     throw new Error("Already on this branch");
                 }
                 await localServices.git.switchBranch(projectPathRef.current, branchName, {
-                    createLocalBranch: true
+                    createLocalBranch: true,
+                    trackRemoteBranch: branch.name
                 });
             }
         });
@@ -293,6 +309,7 @@ export const Git = forwardRef<HTMLDivElement, {}>((props, ref) => {
                 selectedBranch = branch;
             }} selectedBranchName={selectedBranch?.name} />
         }, {
+            width: "80vw",
             bodyStyles: {
                 height: "60vh",
                 display: "flex",
@@ -313,6 +330,40 @@ export const Git = forwardRef<HTMLDivElement, {}>((props, ref) => {
             await initializeCurrentBranchRef.current(projectPathRef.current);
             await initializeChangesRef.current(projectPathRef.current);
         });
+    };
+    const onSelectCommit = async () => {
+        let selectedCommit = currentBranchRef.current?.lastCommit;
+        let accept = await showModal((self) => {
+            return <GitCommitSelectorApp
+                enableWorkspace={false}
+                enableModifyBranch={false}
+                messageApi={messageApi}
+                projectPath={projectPathRef.current}
+                defaultBranch={currentBranchRef.current}
+                defaultSelectedCommit={selectedCommit}
+                onSelect={(commit: IGitLog) => {
+                    selectedCommit = commit;
+                }} />
+        }, {
+            bodyStyles: {
+                height: "65vh"
+            },
+            width: "80vw"
+        });
+        if (accept && selectedCommit) {
+            const lowercaseHash = selectedCommit.hash.toLowerCase();
+            if (lowercaseHash == "head" || lowercaseHash == "workspace") {
+                await localServices.git.switchBranch(projectPathRef.current, "-", {
+                });
+            }
+            else {
+                await localServices.git.switchBranch(projectPathRef.current, selectedCommit.hash, {
+                    detach: true
+                });
+            }
+            await initializeCurrentBranchRef.current(projectPathRef.current);
+            await initializeChangesRef.current(projectPathRef.current);
+        }
     };
     const getCommitCode = async (commit: string, change: GitChangeRecord) => {
         let lowercaseCommit = commit.toLowerCase();
@@ -871,7 +922,12 @@ export const Git = forwardRef<HTMLDivElement, {}>((props, ref) => {
                             <Button size={"small"}
                                 type="text"
                                 icon={<BranchesSVG />}
-                                onClick={onSelectBranch}>{currentBranch.name}</Button>}
+                                onClick={onSelectBranch}>{currentBranch.detached ? "Detached HEAD" : currentBranch.name}</Button>}
+                        {projectPath != "" && currentBranch != undefined &&
+                            <Button size={"small"}
+                                type="text"
+                                icon={<GitCommitSVG />}
+                                onClick={onSelectCommit}>{trimCommitHash(currentBranch.lastCommit?.hash ?? "HEAD")}</Button>}
                         {projectPath != "" && currentBranch != undefined &&
                             <Tooltip title="Refresh changes"><Button size={"small"}
                                 type="text"
